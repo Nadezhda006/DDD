@@ -182,48 +182,67 @@ class BackgroundMinerScanner
     static void Main()
     {
         WriteLog("Miner scanner started. Running in background...");
+        
         while (true)
         {
+            
             ScanAndTerminateMiners();
+            Thread.Sleep(100);
             ScanAndDeleteMinerFiles();
+            Thread.Sleep(100);
             ScanAndRemoveRegistryEntries();
+            Thread.Sleep(100);
             ScanForHighCPUProcesses();
-
-            WriteLog("Scan completed. Sleeping for 5 minutes...");
+            Thread.Sleep(100);
+            Console.WriteLine("Scan completed. Sleeping for 5 minutes...");
             Thread.Sleep(TimeSpan.FromMinutes(5));
-        }
+
+        }    
+        
+        
     }
 
     static void ScanAndTerminateMiners()
     {
         foreach (var process in Process.GetProcesses())
         {
-            try
-            {
-                string exePath = process.MainModule.FileName;
-                bool isTrusted = IsFileSignedAndTrusted(exePath);
-
-                if (minerProcesses.Any(miner => process.ProcessName.IndexOf(miner, StringComparison.OrdinalIgnoreCase) >= 0) || !isTrusted)
+            int counter = 0;
+           
+                try
                 {
-                    WriteLog($"⚠️ Suspicious process detected: {process.ProcessName} | Trusted: {isTrusted}");
-                    Console.Write($"Do you want to terminate this process?: {process.ProcessName} (y/n) : ");
-                    string input = Console.ReadLine();
-                    if (input == "y")
+                    string exePath = process.MainModule.FileName;
+                    bool isTrusted = IsFileSignedAndTrusted(exePath);
+
+                    if (minerProcesses.Any(miner => process.ProcessName.IndexOf(miner, StringComparison.OrdinalIgnoreCase) >= 0) && !isTrusted)
                     {
-                        process.Kill();
-                        WriteLog("Process terminated.");
+                        WriteLog($"⚠️ Suspicious process detected: {process.ProcessName} | Trusted: {isTrusted}");
+                        Console.Write($"Do you want to terminate this process?: {process.ProcessName} (y/n) : ");
+                        string input = Console.ReadLine();
+                        if (input == "y")
+                        {
+                            process.Kill();
+                            WriteLog("Process terminated.");
+                        }
+                        else
+                        {
+                            break;
+                        }
+
                     }
                     else
                     {
+                        Console.WriteLine("No suspicious processes found.");
                         break;
                     }
-
                 }
-            }
-            catch (Exception ex)
-            {
-                WriteLog($"Error handling process {process.ProcessName}: {ex.Message}");
-            }
+
+                catch (Exception ex)
+                {
+                    WriteLog($"Error handling process {process.ProcessName}: {ex.Message}");
+                }
+
+                counter++;
+            
         }
     }
 
@@ -237,7 +256,7 @@ class BackgroundMinerScanner
                 {
                     foreach (var file in Directory.GetFiles(directory))
                     {
-                        if (minerProcesses.Any(miner => Path.GetFileName(file).IndexOf(miner, StringComparison.OrdinalIgnoreCase) >= 0) || !IsFileSignedAndTrusted(file))
+                        if (minerProcesses.Any(miner => Path.GetFileName(file).IndexOf(miner, StringComparison.OrdinalIgnoreCase) >= 0) && !IsFileSignedAndTrusted(file))
                         {
                             WriteLog($"Suspicious file found: {file}");
                             Console.Write($"Do you want to delete this file?: {file} (y/n) : ");
@@ -252,6 +271,11 @@ class BackgroundMinerScanner
                                 break;
                             }
 
+                        }
+                        else
+                        {
+                            Console.WriteLine("No suspicious files found.");
+                            break;
                         }
 
                     }
@@ -291,6 +315,11 @@ class BackgroundMinerScanner
                                     break;
                                 }
                             }
+                            else
+                            {
+                                Console.WriteLine("No suspicious regisry entries found.");
+                                break;
+                            }
                         }
                     }
                 }
@@ -329,6 +358,11 @@ class BackgroundMinerScanner
                             break;
                         }
 
+                    }
+                    else
+                    {
+                        Console.WriteLine("CPU usage is in norm.");
+                        break;
                     }
                 }
             }
